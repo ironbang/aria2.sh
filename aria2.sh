@@ -18,9 +18,11 @@ sh_ver="2.7.4"
 http_proxy="http://192.168.1.175:10809"
 socks5_proxy="192.168.1.175:10808"
 
+# 文件下载保存路径
+download_path="/data/aria2"
+
 export PATH=~/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin
 aria2_conf_dir="/usr/local/etc/aria2c"
-download_path="/tmp/downloads"
 aria2_conf="${aria2_conf_dir}/aria2.conf"
 aria2_log="${aria2_conf_dir}/aria2.log"
 aria2c="/usr/local/bin/aria2c"
