@@ -13,6 +13,11 @@
 #
 
 sh_ver="2.7.4"
+
+# 自定义代理
+http_proxy="http://192.168.1.175:10809"
+socks5_proxy="192.168.1.175:10808"
+
 export PATH=~/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin
 aria2_conf_dir="/usr/local/etc/aria2c"
 download_path="/tmp/downloads"
@@ -28,6 +33,7 @@ Font_color_suffix="\033[0m"
 Info="[${Green_font_prefix}信息${Font_color_suffix}]"
 Error="[${Red_font_prefix}错误${Font_color_suffix}]"
 Tip="[${Green_font_prefix}注意${Font_color_suffix}]"
+
 
 check_root() {
     [[ $EUID != 0 ]] && echo -e "${Error} 当前非ROOT账号(或没有ROOT权限)，无法继续操作，请更换ROOT账号或使用 ${Green_background_prefix}sudo su${Font_color_suffix} 命令获取临时ROOT权限（执行后可能会提示输入当前账号的密码）。" && exit 1
@@ -117,21 +123,23 @@ Download_aria2() {
         rm -vf $(which aria2c)
     done
     DOWNLOAD_URL="https://github.com/P3TERX/Aria2-Pro-Core/releases/download/${aria2_new_ver}/aria2-${aria2_new_ver%_*}-static-linux-${ARCH}.tar.gz"
-    {
-        wget -t2 -T3 -O- "${DOWNLOAD_URL}" ||
-            wget -t2 -T3 -O- "https://gh-acc.p3terx.com/${DOWNLOAD_URL}"
-    } | tar -zx
+    #{
+        #wget -t2 -T3 -O- "${DOWNLOAD_URL}" ||
+        #    wget -t2 -T3 -O- "https://gh-acc.p3terx.com/${DOWNLOAD_URL}"
+    #} | tar -zx
+	wget -O- --no-check-certificate -e "https_proxy=${http_proxy}" "${DOWNLOAD_URL}" | tar -zx 
     [[ ! -s "aria2c" ]] && echo -e "${Error} Aria2 下载失败 !" && exit 1
     [[ ${update_dl} = "update" ]] && rm -f "${aria2c}"
     mv -f aria2c "${aria2c}"
-    [[ ! -e ${aria2c} ]] && echo -e "${Error} Aria2 主程序安装失败！" && exit 1
+    [[ ! -e ${aria2c} ]] && echo -e "${Error} Aria2 主程序安装失败！" && exit 1zx
     chmod +x ${aria2c}
     echo -e "${Info} Aria2 主程序安装完成！"
 }
 Download_aria2_conf() {
-    PROFILE_URL1="https://p3terx.github.io/aria2.conf"
-    PROFILE_URL2="https://aria2c.now.sh"
-    PROFILE_URL3="https://cdn.jsdelivr.net/gh/P3TERX/aria2.conf@master"
+    # PROFILE_URL1="https://p3terx.github.io/aria2.conf"
+    # PROFILE_URL2="https://aria2c.now.sh"
+    # PROFILE_URL3="https://cdn.jsdelivr.net/gh/P3TERX/aria2.conf@master"
+	PROFILE_URL="https://raw.githubusercontent.com/ironbang/aria2.conf/master"
     PROFILE_LIST="
 aria2.conf
 clean.sh
@@ -148,9 +156,7 @@ LICENSE
     mkdir -p "${aria2_conf_dir}" && cd "${aria2_conf_dir}"
     for PROFILE in ${PROFILE_LIST}; do
         [[ ! -f ${PROFILE} ]] && rm -rf ${PROFILE}
-        wget -N -t2 -T3 ${PROFILE_URL1}/${PROFILE} ||
-            wget -N -t2 -T3 ${PROFILE_URL2}/${PROFILE} ||
-            wget -N -t2 -T3 ${PROFILE_URL3}/${PROFILE}
+        wget -N -t2 -T3 --no-check-certificate -e "https_proxy=${http_proxy}" ${PROFILE_URL}/${PROFILE}
         [[ ! -s ${PROFILE} ]] && {
             echo -e "${Error} '${PROFILE}' 下载失败！清理残留文件..."
             rm -vrf "${aria2_conf_dir}"
@@ -168,9 +174,7 @@ LICENSE
 }
 Service_aria2() {
     if [[ ${release} = "centos" ]]; then
-        wget -N -t2 -T3 "https://raw.githubusercontent.com/P3TERX/aria2.sh/master/service/aria2_centos" -O /etc/init.d/aria2 ||
-            wget -N -t2 -T3 "https://cdn.jsdelivr.net/gh/P3TERX/aria2.sh@master/service/aria2_centos" -O /etc/init.d/aria2 ||
-            wget -N -t2 -T3 "https://gh-raw.p3terx.com/P3TERX/aria2.sh/master/service/aria2_centos" -O /etc/init.d/aria2
+        wget -N -t2 -T3 --no-check-certificate -e "https_proxy=${http_proxy}" "https://raw.githubusercontent.com/ironbang/aria2.sh/master/service/aria2_centos" -O /etc/init.d/aria2
         [[ ! -s /etc/init.d/aria2 ]] && {
             echo -e "${Error} Aria2服务 管理脚本下载失败 !"
             exit 1
@@ -179,9 +183,7 @@ Service_aria2() {
         chkconfig --add aria2
         chkconfig aria2 on
     else
-        wget -N -t2 -T3 "https://raw.githubusercontent.com/P3TERX/aria2.sh/master/service/aria2_debian" -O /etc/init.d/aria2 ||
-            wget -N -t2 -T3 "https://cdn.jsdelivr.net/gh/P3TERX/aria2.sh@master/service/aria2_debian" -O /etc/init.d/aria2 ||
-            wget -N -t2 -T3 "https://gh-raw.p3terx.com/P3TERX/aria2.sh/master/service/aria2_debian" -O /etc/init.d/aria2
+        wget -N -t2 -T3 --no-check-certificate -e "https_proxy=${http_proxy}" "https://raw.githubusercontent.com/ironbang/aria2.sh/master/service/aria2_debian" -O /etc/init.d/aria2
         [[ ! -s /etc/init.d/aria2 ]] && {
             echo -e "${Error} Aria2服务 管理脚本下载失败 !"
             exit 1
@@ -200,7 +202,8 @@ Installation_dependency() {
         apt-get install -y wget curl nano ca-certificates findutils jq tar gzip dpkg
     fi
     if [[ ! -s /etc/ssl/certs/ca-certificates.crt ]]; then
-        wget -qO- git.io/ca-certificates.sh | bash
+        # wget -qO- git.io/ca-certificates.sh | bash
+		wget -qO- --no-check-certificate -e "https_proxy=${http_proxy}" https://git.io/ca-certificates.sh | bash
     fi
 }
 Install_aria2() {
